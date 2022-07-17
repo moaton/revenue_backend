@@ -1,4 +1,6 @@
 const express = require('express')
+const fs = require('fs')
+const https = require('https')
 const bodyParser = require('body-parser')
 const cors = require('cors')
 const app = express()
@@ -26,6 +28,15 @@ require("./app/routes/accounts.routes")(app);
 require("./app/routes/revenues.routes")(app);
 const PORT = process.env.PORT || 8080
 // 8080
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}.`)
+
+const httpsOptions = {
+  key: fs.readFileSync('certificates/key.pem'),
+  cert: fs.readFileSync('certificates/cert.pem')
+}
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}.`)
+// })
+
+https.createServer(httpsOptions, app).listen(PORT, () => {
+  console.log('HTTPS');
 })
