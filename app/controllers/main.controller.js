@@ -16,10 +16,12 @@ exports.create = async (req, res) => {
       bcrypt.genSalt(saltRounds, async function(err, salt) {
         bcrypt.hash(req.body.password, salt, async function(err, hash) {
             if(!err){
+              let id = null
               await accounts.create({username: req.body.username, password: hash}).then(response => {
+                id = response.id
                 revenues.create({id: response.id, revenue: 0})
               })
-              res.send({message: 'success'})
+              res.send({message: 'success', id})
             }
         });
     });
