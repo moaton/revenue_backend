@@ -7,35 +7,37 @@ const saltRounds = 10;
 
 const Op = db.Sequelize.Op;
 exports.create = async (req, res) => {
-  
-  if(req.body && req.body.username && req.body.password){
-    const resultsCash = await db.sequelize.query(
-      `select * from accounts where accounts.username = '${req.body.username}'`,{ type: db.sequelize.QueryTypes.SELECT}
-    );
-    if(resultsCash.length === 0){
-      bcrypt.genSalt(saltRounds, async function(err, salt) {
-        bcrypt.hash(req.body.password, salt, async function(err, hash) {
-            if(!err){
-              let id = null
-              await accounts.create({username: req.body.username, password: hash}).then(response => {
-                id = response.id
-                revenues.create({id: response.id, revenue: 0})
-              })
-              res.send({message: 'success', id})
-            }
-        });
-    });
-    } else {
-      bcrypt.compare(req.body.password, resultsCash[0].password, async function(err, result) {
-        if(result){
-          let data = await revenues.findOne({where: {id: resultsCash[0].id} })
-          res.send(data.dataValues)
-        } else {
-          res.status(404).send({message: 'the user has been created'})
-        }
+  try {
+    if(req.body && req.body.username && req.body.password){
+      const resultsCash = await accounts.findAll({where: {username: req.body.username.toLowerCase()}})
+      if(resultsCash.length === 0){
+        bcrypt.genSalt(saltRounds, async function(err, salt) {
+          bcrypt.hash(req.body.password, salt, async function(err, hash) {
+              if(!err){
+                let id = null
+                await accounts.create({username: req.body.username, password: hash}).then(response => {
+                  id = response.id
+                  revenues.create({id: response.id, revenue: 0})
+                })
+                res.send({message: 'success', id})
+              }
+          });
       });
+      } else {
+        bcrypt.compare(req.body.password, resultsCash[0].dataValues.password, async function(err, result) {
+          if(result){
+            let data = await revenues.findOne({where: {id: resultsCash[0].id} })
+            res.send(data.dataValues)
+          } else {
+            res.status(404).send({message: 'the user has been created'})
+          }
+        });
+      }
     }
+  } catch (error) {
+    res.status(500).send(error)
   }
+  
 };
 exports.findAll = async (req, res) => {  
   console.log(req, 'req2');

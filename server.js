@@ -33,10 +33,10 @@ const httpsOptions = {
   key: fs.readFileSync('certificates/key.pem'),
   cert: fs.readFileSync('certificates/cert.pem')
 }
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}.`)
-// })
-
-https.createServer(httpsOptions, app).listen(PORT, () => {
-  console.log('HTTPS');
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}.`)
 })
+
+// https.createServer(httpsOptions, app).listen(PORT, () => {
+//   console.log('HTTPS');
+// })
