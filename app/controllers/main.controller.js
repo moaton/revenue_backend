@@ -42,6 +42,48 @@ exports.create = async (req, res) => {
 exports.findAll = async (req, res) => {  
   console.log(req, 'req2');
 };
+exports.chartData = async (req, res) => {
+  let data = await revenues.findOne({where: {id: req.params.id} })
+  let expenses = JSON.parse(data.dataValues.expenses),
+  take = req.query.take
+  let categories = [], series = [], categoryCost = 0
+  let from = new Date(), to = new Date()
+  switch (take) {
+    case 'day':
+      from.setDate(from.getDate() - 1)
+      break;
+    case 'week':
+      from.setDate(from.getDate() - 7)
+      break;
+    case 'month':
+      from.setDate(from.getDate() - 30)
+      break;
+    case 'three_month':
+      from.setDate(from.getDate() - 90)
+      break
+    case 'six_month':
+      from.setDate(from.getDate() - 180)
+      break
+    case 'year':
+      from.setDate(from.getDate() - 365)
+      break
+    default:
+      break;
+  }
+  expenses.filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).map(item => {
+    if(categories.findIndex(el => el === item.type) === -1){
+      categories.push(item.type)
+    }
+  })
+  categories.map(category => {
+    categoryCost = 0
+    expenses.filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).filter(sItem => sItem.type === category).map(sItem => {
+      categoryCost += sItem.cost
+    })
+    series.push(categoryCost)
+  })
+  res.send({categories, series})
+}
 exports.findOne = async (req, res) => {
   let data = await revenues.findOne({where: {id: req.params.id}})
   res.send(data.dataValues)

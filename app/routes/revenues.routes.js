@@ -3,6 +3,7 @@ module.exports = app => {
   var router = require("express").Router();
   router.post("/", revenues.create);
   router.get("/", revenues.findAll);
+  router.get("/chart-data/:id", revenues.chartData);
   router.get("/:id", revenues.findOne);
   router.put("/:id", revenues.update);
   router.delete("/:id", revenues.delete);
