@@ -5,6 +5,8 @@ const revenues = db.revenues;
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
+const { encrypt, decrypt } = require('../../crypto');
+
 const Op = db.Sequelize.Op;
 exports.create = async (req, res) => {
   try {
@@ -44,7 +46,8 @@ exports.findAll = async (req, res) => {
 };
 exports.chartData = async (req, res) => {
   let data = await revenues.findOne({where: {id: req.params.id} })
-  let expenses = JSON.parse(data.dataValues.expenses),
+  let pass = await accounts.findOne({where: {id: req.params.id}})
+  let expenses = data.dataValues.expenses === null ? '[]' : decrypt(JSON.parse(data.dataValues.expenses), pass.dataValues.password.slice(0, 32)),
   take = req.query.take
   let categories = [], series = [], categoryCost = 0
   let from = new Date(), to = new Date()
@@ -70,14 +73,14 @@ exports.chartData = async (req, res) => {
     default:
       break;
   }
-  expenses.filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).map(item => {
+  JSON.parse(expenses).filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).map(item => {
     if(categories.findIndex(el => el === item.type) === -1){
       categories.push(item.type)
     }
   })
   categories.map(category => {
     categoryCost = 0
-    expenses.filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).filter(sItem => sItem.type === category).map(sItem => {
+    JSON.parse(expenses).filter(item => new Date(item.date) >= from && new Date(item.date) <= to).sort((a, b) => a.type > b.type ? 1 : -1).filter(sItem => sItem.type === category).map(sItem => {
       categoryCost += sItem.cost
     })
     series.push(categoryCost)
@@ -86,15 +89,49 @@ exports.chartData = async (req, res) => {
 }
 exports.findOne = async (req, res) => {
   let data = await revenues.findOne({where: {id: req.params.id}})
-  res.send(data.dataValues)
+  console.log('exports.findOne= --> data', data)
+  let pass = await accounts.findOne({where: {id: req.params.id}})
+  let sendingData = {
+    id: req.params.id,
+    revenue: data.dataValues.revenue === '0' ? data.dataValues.revenue : Number(decrypt(JSON.parse(data.dataValues.revenue), pass.dataValues.password.slice(0, 32))),
+    expenses: data.dataValues.expenses === null ? null : decrypt(JSON.parse(data.dataValues.expenses), pass.dataValues.password.slice(0, 32)),
+    updatedAt: data.dataValues.updatedAt,
+    createdAt: data.dataValues.createdAt
+  }
+  console.log(sendingData, "sendingData FIND");
+  res.send(sendingData)
 };
 exports.update = async (req, res) => {
   let data = null
-  const response = await revenues.update({id: req.body.id, revenue: req.body.revenue, expenses: req.body.expenses}, {where: {id: req.body.id}}).then(() => {
-    return revenues.findOne({where: {id: req.body.id}})
+  let pass = await accounts.findOne({where: {id: req.body.id}})
+  let exp = null
+  if(req.body.expenses)
+    exp = JSON.stringify(encrypt(req.body.expenses, pass.dataValues.password.slice(0, 32)))
+  const rev = JSON.stringify(encrypt(`${req.body.revenue}`, pass.dataValues.password.slice(0, 32)))
+  console.log('exports.update= --> rev', rev)
+  
+  const response = await revenues.update({id: req.body.id, revenue: rev, expenses: exp}, {where: {id: req.body.id}}).then(async () => {
+    let data = await revenues.findOne({where: {id: req.body.id}})
+    console.log('response --> data', data)
+    console.log(JSON.parse(data.dataValues.expenses));
+    console.log(JSON.parse(data.dataValues.revenue));
+    console.log('------------------------------------');
+    console.log(decrypt(JSON.parse(data.dataValues.revenue), pass.dataValues.password.slice(0, 32)));
+    if(data.dataValues.expenses)
+      console.log(decrypt(JSON.parse(data.dataValues.expenses), pass.dataValues.password.slice(0, 32)));
+    console.log('------------------------------------');
+    let sendingData = {
+      id: req.params.id,
+      revenue: Number(decrypt(JSON.parse(data.dataValues.revenue), pass.dataValues.password.slice(0, 32))),
+      expenses: data.dataValues.expenses === null ? null : decrypt(JSON.parse(data.dataValues.expenses), pass.dataValues.password.slice(0, 32)),
+      updatedAt: data.dataValues.updatedAt,
+      createdAt: data.dataValues.createdAt
+    }
+    console.log(sendingData, "sendingDatasendingData UPDATE");
+    return sendingData
   })
   if(response){
-    res.send(response.dataValues)
+    res.send(response)
   }
 
 };

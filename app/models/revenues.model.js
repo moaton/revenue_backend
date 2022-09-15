@@ -5,7 +5,7 @@ module.exports = (sequelize, Sequelize) => {
       primaryKey: true
     },
     revenue: {
-      type: Sequelize.BIGINT
+      type: Sequelize.TEXT
     },
     expenses: {
       type: Sequelize.TEXT
